@@ -4,7 +4,6 @@
 	#include<stdlib.h>
 	#include<ctype.h>
 	#include "symbol.h"
-	#include"lex.yy.c"
 	//int number;
 	/*struct quad
 	{
@@ -40,11 +39,11 @@
 %union
 {
 	char var[10];
-	struct token *symbol_table[100];
+	//struct token *symbol_table[100];
 }
 
 
-%token <var> NUM VAR RELOP MAIN TYPE ASSIGN HEADER
+%token <var> NUM VAR RELOP MAIN TYPE HEADER
 %token WHILE IF ELSE FOR
 %type <var> EXPR ASSIGNMENT RELEXPR
 %left '-' '+'
@@ -62,13 +61,18 @@ BLOCK : '{' CODE '}' ;
 ;
 CODE : BLOCK | STATEMENT CODE| STATEMENT
 ;
-STATEMENT: VARASSIGN ';'| WHILE '(' RELEXPR ')' BLOCK  | IF '(' RELEXPR ')' BLOCK 
+STATEMENT: VARASSIGN ';'| WHILE '(' RELEXPR ')' BLOCK  | IF '(' RELEXPR ')' BLOCK | ERROR | error ';'
 ;
+
+ERROR: NUM {printf("Error at line: %d\n",line_no);}
+        | VAR {printf("Error at line: %d\n",line_no);}
 
 VARASSIGN: TYPE VAR {
 			printf("Inside VARASSIGN\n");
+			//print_symbols();
+			//printf("$2 = %s\n",$2);
 			index1 = getPosition($2);
-			printf("Index1 = %d\n",index1);
+			//printf("Index1 = %d\n",index1);
 			strcpy(symbol_table[index1]->type,$1);
 		}
 	 |TYPE VAR '=' EXPR {
@@ -85,6 +89,7 @@ ASSIGNMENT: VAR '=' EXPR{
 			strcpy(QUAD[Index].result,$1);
 			checkIndex = checkSymbolTable($3);
 			printf("%d ", scopeCount);*/
+			printf("Inside Assignment\n");
 			int index1 = getPosition($1);	
 			//int index2 = getPosition($3);		
 
@@ -124,7 +129,9 @@ EXPR : EXPR '+' EXPR { /*if(isdigit($1[0]) && isdigit($3[0])) {
      			index1 = getPosition($1);
      			sprintf($$,"%d",(symbol_table[index1]->value));     			
      		}
-     | NUM
+     | NUM      {
+                        printf("Inside Num\n");
+                }
      ;
 
 RELEXPR: VAR RELOP RELEXPR {
@@ -172,16 +179,16 @@ int getValue(int value1, int value2, char* operator){
 int yyerror(char *string)
 {
 	printf("\n Error on line no:%d\n",line_no);
-	fprintf(stderr,"%s\n");
-	//yyparse();
-	return 0;
+	fprintf(stderr,"%s\n",string);
+	yyparse();
+	//return 0;
 }
 
 int main(int argc,char *argv[])
 {
 	int i;
 	int a;
-	if((a = yyparse())) {
+	if(!(a = yyparse())) {
 		printf("Result of parse: %d",a);
 		printf("\t\t\t\t Symbol Table \t\t\t\t\n");
 		printf("\n\t%s\t|\t%s\t|\t%s\t|\t%s\t","Varibale Name","Value","Type","Scope");
@@ -190,7 +197,7 @@ int main(int argc,char *argv[])
 					
 					
 					if (strcmp(symbol_table[i]->variable_name,"") != 0)
-						printf("\n\t\t%s\t|\t%d\t|\t%s\t", symbol_table[i]->variable_name, symbol_table[i]->value, 
+						printf("\n\t\t%s\t|\t%d\t|\t%s\t|\t%s\t", symbol_table[i]->variable_name, symbol_table[i]->value, 
 						symbol_table[i]->type,symbol_table[i]->scope);
 		}
 		printf("\n\n");	
@@ -204,7 +211,7 @@ int main(int argc,char *argv[])
 		printf("\n\n");*/
 
 	}
-	printf("Error of parse: %d",a);
+	//printf("Error of parse: %d",a);
 	return 0;
 }
 

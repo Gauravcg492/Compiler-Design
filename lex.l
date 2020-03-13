@@ -1,6 +1,7 @@
 %{
     #include<stdio.h>
     #include<string.h>
+    #include"symbol.h"
     #include"y.tab.h"
     int scope_count = -1;
     /*struct token {
@@ -11,12 +12,12 @@
         int scope_count;
         char scope[10];
     };*/
-    //struct token *symbol_table[100];
+    struct token *symbol_table[100];
     int ind =-1;
     int type = 0;
     int line_no = 1;
     int getPosition(char *);
-    //void print_symbols();
+    void print_symbols();
 %}
 identifier [a-zA-Z][_a-zA-Z0-9]*
 number [0-9]+|([0-9]*\.[0-9]+)
@@ -26,12 +27,12 @@ number [0-9]+|([0-9]*\.[0-9]+)
 \/\*(.*\n)*.*\*\/ 	{}
 "#include<stdio.h>"     {return HEADER;}
 "#include<iostream>"    {return HEADER;} 		 					
-"while" {printf("while: %s\n",yytext);return WHILE;}
+"while" {printf("while: %s\n",yytext);;return WHILE;}
 "if" {printf("if %s in line %d\n",yytext,line_no);return IF;}
 "else" {printf("else %s in line %d\n",yytext,line_no);return ELSE;}
 "for" {printf("for %s in line %d\n",yytext,line_no);return FOR;}
-"main"	{ printf("main %s in line %d\n",yytext,line_no);return MAIN;}
-"int"|"char"|"float" {	type=1; printf("Keyword %s in line %d\n",yytext,line_no);return TYPE;}
+"main"	{ printf("main %s in line %d\n",yytext,line_no);strcpy(yylval.var,yytext);return MAIN;}
+"int"|"char"|"float" {	type=1; printf("Keyword %s in line %d\n",yytext,line_no);strcpy(yylval.var,yytext);return TYPE;}
 {number}+{identifier} {printf("Error %s in line %d\n",yytext,line_no);}
 {identifier} {
 	    printf("Identifier %s in line %d\n",yytext,line_no);
@@ -90,12 +91,14 @@ number [0-9]+|([0-9]*\.[0-9]+)
 			}
 		}
     }
+    //print_symbols();
+    strcpy(yylval.var,yytext);
     return VAR;
 }
-{number} {printf("Number %s in line %d\n",yytext,line_no);return NUM;}
+{number} {printf("Number %s in line %d\n",yytext,line_no);strcpy(yylval.var,yytext);return NUM;}
 \<|\>|\>=|\<=|==|!= {printf("Relational Operator %s in line %d\n",yytext,line_no);return RELOP;}
 (\+\+)|(--) {printf("Increment Operator %s in line %d\n",yytext,line_no);return *yytext;}
-= {printf("Assignment operator %s in line %d\n",yytext,line_no);return ASSIGN;}
+= {printf("Assignment operator %s in line %d\n",yytext,line_no);return '=';}
 "{"	{ scope_count++; printf("Opening braces %s in line %d\n",yytext,line_no); return '{';}
 "}"	{ scope_count--; printf("Closing braces %s in line %d\n",yytext,line_no);return '}';}
 "(" {printf("Opening brackets %s in line %d\n",yytext,line_no); return '(';}
@@ -119,7 +122,7 @@ int getPosition(char* string)
 	return -1;
 
 }
-/*
+
 void print_symbols()
 {
 	printf("Symbol Table\n\n\n\n");
@@ -133,7 +136,7 @@ void print_symbols()
 		printf("\n\n");
 	}
 }
-
+/*
 int main(int argc, char* argv[])
 {
     if(argc > 1)
