@@ -3,7 +3,8 @@
 	#include<stdio.h>
 	#include<stdlib.h>
 	#include<ctype.h>
-	#include "symbol.h"
+	#include"symbol.h"
+	#include"node.h"
 	//int number;
 	/*struct quad
 	{
@@ -35,9 +36,12 @@
 	//extern int scopeCount;
 	//int globalIndex = 0;
 	//int labelCount = 0;
+	typedef struct node node;
+	node* makeNode(char *,node *,node *);
 %}
 %union
 {
+	struct node *np;
 	char var[10];
 	//struct token *symbol_table[100];
 }
@@ -45,7 +49,7 @@
 
 %token <var> NUM VAR RELOP MAIN TYPE HEADER
 %token WHILE IF ELSE FOR
-%type <var> EXPR ASSIGNMENT RELEXPR
+%type <np> EXPR ASSIGNMENT RELEXPR PROGRAM Main STATEMENT CODE BLOCK VARASSIGN
 %left '-' '+'
 %left '*' '/'
 
@@ -54,18 +58,25 @@ START: HEADERFILE Main
 	|;
 HEADERFILE: HEADER HEADERFILE {printf("Header file completed\n");}
 	|;
-Main : TYPE MAIN '(' ')' '{' PROGRAM '}' ;
-PROGRAM : CODE
+Main : TYPE MAIN '(' ')' '{' PROGRAM '}' { $$ = make_node("PROGRAM", make_node($1, NULL, NULL), $6); printTree($$);};
+PROGRAM : CODE { $$ = $1;}
 ;
-BLOCK : '{' CODE '}' ;
+BLOCK : '{' CODE '}' { $$ = $2; };
 ;
-CODE : BLOCK | STATEMENT CODE| STATEMENT
-;
-STATEMENT: VARASSIGN ';'| WHILE '(' RELEXPR ')' BLOCK  | IF '(' RELEXPR ')' BLOCK | ERROR | error ';'
-;
+CODE : BLOCK { $$ = $1; }
+     | STATEMENT CODE { $$ = make_node("STATEMENT",$1,$2); }
+     | STATEMENT { $$ = $1; }
+     ;
+STATEMENT: VARASSIGN ';' { $$ = $1; }
+	| WHILE '(' RELEXPR ')' BLOCK { $$ = make_node("while",$3,$5); }  
+	| IF '(' RELEXPR ')' BLOCK { $$ = make_node("if",$3,$5); }
+	| ERROR { $$ = NULL; }
+	| error ';' { $$ = NULL; }
+	;
 
 ERROR: NUM {printf("Error at line: %d\n",line_no);}
         | VAR {printf("Error at line: %d\n",line_no);}
+        ;
 
 VARASSIGN: TYPE VAR {
 			printf("Inside VARASSIGN\n");
@@ -74,13 +85,15 @@ VARASSIGN: TYPE VAR {
 			index1 = getPosition($2);
 			//printf("Index1 = %d\n",index1);
 			strcpy(symbol_table[index1]->type,$1);
+			$$ = make_node("Type",make_node($1,NULL,NULL),make_node($2,NULL,NULL));
 		}
 	 |TYPE VAR '=' EXPR {
 	 		index1 = getPosition($2);
 	 		strcpy(symbol_table[index1]->type,$1);
 	 		symbol_table[index1]->value = atoi($4);
+	 		$$ = make_node("=",make_node("Type",make_node($1,NULL,NULL),make_node($2,NULL,NULL)),$4);
 	 	}
-	 | ASSIGNMENT
+	 | ASSIGNMENT { $$ = $1; }
 	 ;
 ASSIGNMENT: VAR '=' EXPR{						
 			/*strcpy(QUAD[Index].op,"=");
@@ -100,6 +113,7 @@ ASSIGNMENT: VAR '=' EXPR{
 			}
 					
 			//strcpy($$,QUAD[Index++].result);
+			$$ = make_node("=",make_node($1,NULL,NULL),$3);
 			
 			
 			}
@@ -118,19 +132,33 @@ EXPR : EXPR '+' EXPR { /*if(isdigit($1[0]) && isdigit($3[0])) {
 			}				
 			
 		     }*/	//char temp[25];
-		     		sprintf($$, "%d",(atoi($1) + atoi($3)));	
+		     	sprintf($$, "%d",(atoi($1) + atoi($3)));
+		     	
+		     	$$ = make_node("+",$1,$3);	
+		     		
 			}
 			
-     | EXPR '-' EXPR { sprintf($$,"%d",(atoi($1) - atoi($3))); }
-     | EXPR '*' EXPR { sprintf($$,"%d",(atoi($1) * atoi($3))); }
-     | EXPR '/' EXPR { sprintf($$,"%d",(atoi($1) / atoi($3))); }
+     | EXPR '-' EXPR { 
+     			sprintf($$,"%d",(atoi($1) - atoi($3)));
+     			$$ = make_node("-",$1,$3);
+     		     }
+     | EXPR '*' EXPR { 
+     			sprintf($$,"%d",(atoi($1) * atoi($3)));
+     			$$ = make_node("*",$1,$3); 
+     		     }
+     | EXPR '/' EXPR { 
+     			sprintf($$,"%d",(atoi($1) / atoi($3))); 
+     			$$ = make_node("/",$1,$3);
+     		     }
      
      | VAR	{
      			index1 = getPosition($1);
      			sprintf($$,"%d",(symbol_table[index1]->value));     			
+     			$$ = make_node($1,NULL,NULL);
      		}
      | NUM      {
                         printf("Inside Num\n");
+                        $$ = make_node($1,NULL,NULL);
                 }
      ;
 
@@ -143,6 +171,7 @@ RELEXPR: VAR RELOP RELEXPR {
 					strcpy($$, itoa(getValue(symbol_table[index]->value, symbol_table[index2]->value, $2))); 
 				}*/
 				sprintf($$,"%d",(getValue(symbol_table[index1]->value, atoi($3), $2)));
+				$$ = make_node($2,make_node($1,NULL,NULL),$3);
 			   }
 	   | NUM RELOP RELEXPR { 	/*if (isdigit($3[0])) {
 						strcpy($$, itoa(getValue(atoi($1), atoi($3), $2))); 
@@ -175,6 +204,15 @@ int getValue(int value1, int value2, char* operator){
 	else 
 		return value1 != value2;	
 }
+
+node *make_node(char *value, node *left, node *right) {
+	node *new_node = malloc(sizeof(node));
+	strcpy(new_node->value, value);	
+	new_node -> left = left;
+	new_node -> right = right;
+	return new_node;
+}
+
 
 int yyerror(char *string)
 {
