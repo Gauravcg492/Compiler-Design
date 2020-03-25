@@ -26,6 +26,7 @@
 	//int checkIndex = 0;
 	extern int line_no; 
 	extern int ind;
+	extern FILE *yyin;
 	//char* toString(int number);
 	//void AddQuadruple(char op[5],char arg1[10],char arg2[10],char result[10]);
 	int getValue(int , int , char*);
@@ -274,6 +275,19 @@ int main(int argc,char *argv[])
 {
 	int i;
 	int a;
+	if(argc > 1)
+	{
+		FILE *fp = fopen(argv[1], "r");
+		if(fp)
+		{
+		    yyin = fp;
+		}			
+	}
+	if(yyin==NULL)
+	{
+	     fprintf(stderr,"%s\n","Unable to open file\n");
+	     return 0;
+	}
 	if(!(a = yyparse())) {
 		printf("\nResult of parse: %d\n",a);
 		printf("\t\t\t\t Symbol Table \t\t\t\t\n");
