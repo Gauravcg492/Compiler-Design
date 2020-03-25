@@ -37,7 +37,10 @@
 	//int globalIndex = 0;
 	//int labelCount = 0;
 	typedef struct node node;
-	node* makeNode(char *,node *,node *);
+	node* make_node(char *,node *,node *);
+	void print_tree_pre(node *);
+	void print_tree_in(node *);
+	void print_tree_post(node *);
 %}
 %union
 {
@@ -58,7 +61,15 @@ START: HEADERFILE Main
 	|;
 HEADERFILE: HEADER HEADERFILE {printf("Header file completed\n");}
 	|;
-Main : TYPE MAIN '(' ')' '{' PROGRAM '}' { $$ = make_node("PROGRAM", make_node($1, NULL, NULL), $6); printTree($$);};
+Main : TYPE MAIN '(' ')' '{' PROGRAM '}' {
+						$$ = make_node("PROGRAM", make_node($1, NULL, NULL), $6);
+						printf("\nPreorder Traversal \n"); 
+						print_tree_pre($$);
+						printf("\nInorder Traversal \n"); 
+						print_tree_in($$); 
+						printf("\nPostorder Traversal \n");
+						print_tree_post($$);
+					 };
 PROGRAM : CODE { $$ = $1;}
 ;
 BLOCK : '{' CODE '}' { $$ = $2; };
@@ -90,7 +101,7 @@ VARASSIGN: TYPE VAR {
 	 |TYPE VAR '=' EXPR {
 	 		index1 = getPosition($2);
 	 		strcpy(symbol_table[index1]->type,$1);
-	 		symbol_table[index1]->value = atoi($4);
+	 		symbol_table[index1]->value = atoi($4->expr_result);
 	 		$$ = make_node("=",make_node("Type",make_node($1,NULL,NULL),make_node($2,NULL,NULL)),$4);
 	 	}
 	 | ASSIGNMENT { $$ = $1; }
@@ -107,7 +118,7 @@ ASSIGNMENT: VAR '=' EXPR{
 			//int index2 = getPosition($3);		
 
 			if (index1 != -1) {
-				symbol_table[index1]->value = atoi($3);
+				symbol_table[index1]->value = atoi($3->expr_result);
 			}else{
 				printf("Error: variable undeclared\n");
 			}
@@ -131,34 +142,39 @@ EXPR : EXPR '+' EXPR { /*if(isdigit($1[0]) && isdigit($3[0])) {
 				AddQuadruple("+",$1,$3,$$);		
 			}				
 			
-		     }*/	//char temp[25];
-		     	sprintf($$, "%d",(atoi($1) + atoi($3)));
-		     	
-		     	$$ = make_node("+",$1,$3);	
+		     }*/	//char temp[25];	     	
+		     		     	
+		     	$$ = make_node("+",$1,$3);
+		     	sprintf($$->expr_result, "%d",(atoi($1->expr_result) + atoi($3->expr_result)));	
 		     		
 			}
 			
      | EXPR '-' EXPR { 
-     			sprintf($$,"%d",(atoi($1) - atoi($3)));
+     			//sprintf($$,"%d",(atoi($1) - atoi($3)));
      			$$ = make_node("-",$1,$3);
+     			sprintf($$->expr_result, "%d",(atoi($1->expr_result) - atoi($3->expr_result)));	
      		     }
      | EXPR '*' EXPR { 
-     			sprintf($$,"%d",(atoi($1) * atoi($3)));
+     			//sprintf($$,"%d",(atoi($1) * atoi($3)));
      			$$ = make_node("*",$1,$3); 
+     			sprintf($$->expr_result, "%d",(atoi($1->expr_result) * atoi($3->expr_result)));	
      		     }
      | EXPR '/' EXPR { 
-     			sprintf($$,"%d",(atoi($1) / atoi($3))); 
+     			//sprintf($$,"%d",(atoi($1) / atoi($3))); 
      			$$ = make_node("/",$1,$3);
+     			sprintf($$->expr_result, "%d",(atoi($1->expr_result) / atoi($3->expr_result)));	
      		     }
      
      | VAR	{
      			index1 = getPosition($1);
-     			sprintf($$,"%d",(symbol_table[index1]->value));     			
+     			//sprintf($$,"%d",(symbol_table[index1]->value));     			
      			$$ = make_node($1,NULL,NULL);
+     			sprintf($$->expr_result,"%d",(symbol_table[index1]->value)); 
      		}
      | NUM      {
-                        printf("Inside Num\n");
+                        //printf("Inside Num\n");
                         $$ = make_node($1,NULL,NULL);
+                        sprintf($$->expr_result,"%d",atoi($1));
                 }
      ;
 
@@ -169,23 +185,28 @@ RELEXPR: VAR RELOP RELEXPR {
 				} else {
 					int index2 = getPosition($3);
 					strcpy($$, itoa(getValue(symbol_table[index]->value, symbol_table[index2]->value, $2))); 
-				}*/
-				sprintf($$,"%d",(getValue(symbol_table[index1]->value, atoi($3), $2)));
+				}*/				
 				$$ = make_node($2,make_node($1,NULL,NULL),$3);
+				sprintf($$->expr_result,"%d",(getValue(symbol_table[index1]->value, atoi($3->expr_result), $2)));
 			   }
 	   | NUM RELOP RELEXPR { 	/*if (isdigit($3[0])) {
 						strcpy($$, itoa(getValue(atoi($1), atoi($3), $2))); 
 					} else {
 						index = getPosition($3);
 						strcpy($$, itoa(getValue(atoi($1), symbol_table[index]->value, $2))); 
-					}*/
-					sprintf($$,"%d",(getValue(atoi($1), atoi($3), $2)));
+					}*/					
+					$$ = make_node($2, make_node($1, NULL, NULL), $3);
+					sprintf($$->expr_result,"%d",(getValue(atoi($1), atoi($3->expr_result), $2)));
 			     }
 	   | VAR 	{
-	   			index1 = getPosition($1);
-     				sprintf($$,"%d",(symbol_table[index1]->value));
+	   			index1 = getPosition($1);     				
+     				$$ = make_node($1, NULL, NULL);
+     				sprintf($$->expr_result,"%d",(symbol_table[index1]->value));
 	   		}
-	   | NUM
+	   | NUM	{
+	   			$$ = make_node($1, NULL, NULL);
+	   			sprintf($$->expr_result,"%d",(symbol_table[index1]->value));
+	   		}
 	   ;
 
 %%
@@ -205,7 +226,8 @@ int getValue(int value1, int value2, char* operator){
 		return value1 != value2;	
 }
 
-node *make_node(char *value, node *left, node *right) {
+node *make_node(char *value, node *left, node *right) 
+{
 	node *new_node = malloc(sizeof(node));
 	strcpy(new_node->value, value);	
 	new_node -> left = left;
@@ -213,6 +235,32 @@ node *make_node(char *value, node *left, node *right) {
 	return new_node;
 }
 
+void print_tree_pre(node *root)
+{
+	if (root == NULL)
+		return;
+	printf("%s ", root->value);
+	print_tree_pre(root->left);	
+	print_tree_pre(root->right);	
+}
+
+void print_tree_in(node *root)
+{
+	if (root == NULL)
+		return;
+	print_tree_in(root->left);
+	printf("%s ", root->value);
+	print_tree_in(root->right);
+}
+
+void print_tree_post(node *root)
+{
+	if (root == NULL)
+		return;
+	print_tree_post(root->left);	
+	print_tree_post(root->right);
+	printf("%s ", root->value);
+}
 
 int yyerror(char *string)
 {
@@ -227,7 +275,7 @@ int main(int argc,char *argv[])
 	int i;
 	int a;
 	if(!(a = yyparse())) {
-		printf("Result of parse: %d",a);
+		printf("\nResult of parse: %d\n",a);
 		printf("\t\t\t\t Symbol Table \t\t\t\t\n");
 		printf("\n\t%s\t|\t%s\t|\t%s\t|\t%s\t","Varibale Name","Value","Type","Scope");
 		printf("\n\t-----------------------------------------------------------------------");	
