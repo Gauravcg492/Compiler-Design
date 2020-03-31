@@ -97,7 +97,7 @@ number [0-9]+|([0-9]*\.[0-9]+)
 }
 {number} {printf("Number %s in line %d\n",yytext,line_no);strcpy(yylval.var,yytext);return NUM;}
 \<|\>|\>=|\<=|==|!= {printf("Relational Operator %s in line %d\n",yytext,line_no);return RELOP;}
-(\+\+)|(--) {printf("Increment Operator %s in line %d\n",yytext,line_no);return *yytext;}
+(\+\+)|(--)|(\+)|(-) {printf("Increment Operator %s in line %d\n",yytext,line_no);return *yytext;}
 = {printf("Assignment operator %s in line %d\n",yytext,line_no);return '=';}
 "{"	{ scope_count++; printf("Opening braces %s in line %d\n",yytext,line_no); return '{';}
 "}"	{ scope_count--; printf("Closing braces %s in line %d\n",yytext,line_no);return '}';}
