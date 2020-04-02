@@ -36,32 +36,16 @@ number [0-9]+|([0-9]*\.[0-9]+)
 {number}+{identifier} {printf("Error %s in line %d\n",yytext,line_no);}
 {identifier} {
 	    printf("Identifier %s in line %d\n",yytext,line_no);
-	    if(type > 0){
-        type = 0;
-        //int pos = getPosition(yytext);
-		/*if(pos < 0)
-		{
-			symbol_table[++index] = (token*)malloc(sizeof(token));
-			strcpy(symbol_table[index].variable_name,yytext);
-			symbol_table[index].line_no = line_no;
-			symbol_table[index].scope_count = scope_count;
-			if(scope_count == 0)
-			{
-				strcpy(symbol_table[index],"GLOBAL");
-			}
-			else{
-				strcpy(symbol_table[index],"LOCAL");
-			}
-		}
-		else
-		{
-			
-		}*/
+	    if(type > 0 || 1){
+        	type = 0;
 		int pos = getPosition(yytext);
 		if(pos >= 0){
+			printf("Identifier %s found with scope %d\n",yytext,symbol_table[pos]->scope_count);
+			printf("Current scope count %d\n",scope_count);
 			if(symbol_table[pos]->scope_count != scope_count)
 			{
 				ind++;
+				printf("Inside new symbol table for local\n");
 				symbol_table[ind] = (struct token*)malloc(sizeof(struct token));
 				strcpy(symbol_table[ind]->variable_name,yytext);
 				symbol_table[ind]->line_no = line_no;
@@ -77,6 +61,7 @@ number [0-9]+|([0-9]*\.[0-9]+)
 			}
 		} else{
 			ind++;
+			printf("Inside new symbol table for global\n");
 			symbol_table[ind] = (struct token*)malloc(sizeof(struct token));
 			strcpy(symbol_table[ind]->variable_name,yytext);
 			symbol_table[ind]->line_no = line_no;
@@ -95,8 +80,8 @@ number [0-9]+|([0-9]*\.[0-9]+)
     strcpy(yylval.var,yytext);
     return VAR;
 }
-{number} {printf("Number %s in line %d\n",yytext,line_no);strcpy(yylval.var,yytext);return NUM;}
-\<|\>|\>=|\<=|==|!= {printf("Relational Operator %s in line %d\n",yytext,line_no);return RELOP;}
+{number} {printf("Number %s in line %d\n",yytext,line_no); strcpy(yylval.var,yytext); return NUM;}
+\<|\>|\>=|\<=|==|!= {printf("Relational Operator %s in line %d\n",yytext,line_no); strcpy(yylval.var,yytext); return RELOP;}
 (\+\+)|(--)|(\+)|(-) {printf("Increment Operator %s in line %d\n",yytext,line_no);return *yytext;}
 = {printf("Assignment operator %s in line %d\n",yytext,line_no);return '=';}
 "{"	{ scope_count++; printf("Opening braces %s in line %d\n",yytext,line_no); return '{';}
