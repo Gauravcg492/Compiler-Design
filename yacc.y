@@ -5,8 +5,8 @@
 	#include<ctype.h>
 	#include"symbol.h"
 	#include"node.h"
-	
-	
+	#include"quad.h"
+
 	// -------------------------- General -----------------------------
 	int yyerror(char*);
 	int yylex();
@@ -28,7 +28,7 @@
 	void print_tree_post(node *);
 	
 	// ------------------------- Used for ICG --------------------------
-	struct quad
+	/*struct quad
 	{
 		char op[5];
 		char arg1[10];
@@ -36,14 +36,15 @@
 		char result[10];
 		int scope;
 		char block[10];
-	}QUAD[30];
+	}QUAD[30];*/
+	struct quad QUAD[30];
 	
 	int number;
 	extern int scope_count;
 	int Index = 0;
 	int rIndex=0; 
 	int offset = 0;
-	void add_quadruple(char *op,char *arg1,char *arg2,char *result,int option);
+	void add_quadruple(char*,char*,char*,char*,int);
 	
 	// extra implementations
 	struct stack 
@@ -55,6 +56,29 @@
 	void pop();
 	char* get_top();
 	void eprint(struct quad);
+	
+	// ------------------------- codeopt ----------------
+	struct quad QUAD2[30];
+	struct table{
+		char var[10];
+		int val;
+		char regval[10];
+		int used;
+	};
+	struct table table[30];
+	struct table table2[15];
+	int q_ind = 0;
+	int t_ind = 0;
+	int t_ind2 = 0;
+	
+	int get_result(char*,int,int);
+	int get_position2(char*);
+	int get_position3(char* string);
+	void add_quadruple2(char*,char*,char*,char*);
+	void add_table(char*,int,int);
+	void add_table2(char*,char*);
+	void print_codeopt();
+	void print_table();
 	
 	//int StNo;
 	//int Ind; 
@@ -384,6 +408,9 @@ void print_3addr_code()
 	int estart = 1;
 	int infor = 0;
 	
+	char temp[10];
+	char temp2[10];
+	
 	
 	for(int i=0; i<Index; i++)
 	{
@@ -398,6 +425,9 @@ void print_3addr_code()
 				if(QUAD[i-1].scope != QUAD[i].scope)
 				{
 					label_stk[++ltop] = label_no;
+					sprintf(temp,"%s%s%s",QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2);
+					sprintf(temp2,"L%d",label_no);
+					add_quadruple2("if",temp,"",temp2);
 					printf("if(!(%s%s%s)) goto L%d\n",QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2,label_no++);
 				}
 				else
@@ -409,8 +439,14 @@ void print_3addr_code()
 			{
 				if(estart == 1)
 				{
+					sprintf(temp,"L%d",label_stk[ltop]+1);
+					add_quadruple2("goto","","",temp);
 					printf("goto L%d\n",label_stk[ltop]+1);
+					
+					sprintf(temp,"L%d",label_stk[ltop]);
+					add_quadruple2("L","","",temp);
 					printf("L%d:\n",label_stk[ltop]);
+					
 					label_stk[ltop]++;
 					estart = 0;
 				}
@@ -420,7 +456,13 @@ void print_3addr_code()
 			{
 				if(QUAD[i-1].scope != QUAD[i].scope)
 				{
-					printf("L%d: if(!(%s%s%s)) goto L%d\n",label_no++,QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2,label_no);
+					sprintf(temp,"L%d",label_no);
+					add_quadruple2("L","","",temp);
+					
+					printf("L%d:\n if(!(%s%s%s)) goto L%d\n",label_no++,QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2,label_no);
+					sprintf(temp,"%s%s%s",QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2);
+					sprintf(temp2,"L%d",label_no);
+					add_quadruple2("if",temp,"",temp2);
 					label_stk[++ltop] = label_no;
 					label_no++;
 				}
@@ -443,7 +485,13 @@ void print_3addr_code()
 					}
 					else if(fstates == 1)
 					{
-						printf("L%d: if(!(%s%s%s)) goto L%d\n",label_no++,QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2,label_no);
+						sprintf(temp,"L%d",label_no);
+						add_quadruple2("L","","",temp);
+						
+						printf("L%d:\n if(!(%s%s%s)) goto L%d\n",label_no++,QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2,label_no);
+						sprintf(temp,"%s%s%s",QUAD[i].arg1,QUAD[i].op,QUAD[i].arg2);
+						sprintf(temp2,"L%d",label_no);
+						add_quadruple2("if",temp,"",temp2);
 						label_stk[++ltop] = label_no;
 						label_no++;
 						fstates++;
@@ -483,12 +531,18 @@ void print_3addr_code()
 		{
 			if(i == 0) 
 			{ 
+				add_quadruple2("L","","",QUAD[i].block);
 				printf("%s:\n",QUAD[i].block);
 				//in_block[++top] = 0;
 			}
 			else
 			{
-				if(strcmp(QUAD[i-1].block,"while") == 0) printf("goto L%d\n",label_stk[ltop]-1);
+				if(strcmp(QUAD[i-1].block,"while") == 0) 
+				{
+					sprintf(temp,"L%d",label_stk[ltop]-1);
+					add_quadruple2("goto","","",temp);
+					printf("goto L%d\n",label_stk[ltop]-1);
+				}
 				if(strcmp(QUAD[i-1].block,"for") == 0)
 				{
 					int sind = fsteps[ftop].start_index;
@@ -498,9 +552,13 @@ void print_3addr_code()
 						eprint(QUAD[k]);
 					}
 					ftop--;
+					sprintf(temp,"L%d",label_stk[ltop]-1);
+					add_quadruple2("goto","","",temp);
 					printf("goto L%d\n",label_stk[ltop]-1);
 					
 				}
+				sprintf(temp,"L%d",label_stk[ltop]);
+				add_quadruple2("L","","",temp);
 				printf("L%d:\n",label_stk[ltop--]);
 			}
 			eprint(QUAD[i]);
@@ -515,12 +573,115 @@ void print_3addr_code()
 
 void eprint(struct quad quad)
 {
+	int res;
+	char temp[10];
+	
 	if(strcmp(quad.op,"=") == 0)
 	{
 		printf("%s %s %s\n", quad.result,quad.op,quad.arg1);
+		int iindex;
+		// --------- codeopt ---------
+		if(isdigit(quad.arg1[0]))
+		{
+			res = atoi(quad.arg1);
+			//printf("Inside isdigit for var=%d\n",res);
+			add_quadruple2("",quad.arg1,"",quad.result);
+			iindex = get_position2(quad.result);
+			if(iindex >= 0)
+			{	
+				table[iindex].val = res;
+				table[iindex].used = 1;
+			} else{
+				//printf("Adding table entry\n");
+				add_table(quad.result,res,1);
+				//print_table();
+			}
+		} else{
+			iindex = get_position2(quad.arg1);
+			if(iindex >= 0)
+			{
+				res = table[iindex].val;
+				sprintf(temp,"%d",res);
+				add_quadruple2("",temp,"",quad.result);
+			} else{
+				add_quadruple2("",quad.arg1,"",quad.result);
+			}
+		}
+		
+		
 		return;
 	}
 	printf("%s %s %s %s %s\n",quad.result, "=", quad.arg1, quad.op, quad.arg2);
+	
+	// ------ codeopt ---------
+	
+	int arg1,arg2;	
+	int iindex1;
+	int iindex2;
+	if(isdigit(quad.arg1[0]) && isdigit(quad.arg2[0]))
+	{
+		res = get_result(quad.op,atoi(quad.arg1),atoi(quad.arg2));
+		sprintf(temp,"%d",res);
+		add_quadruple2("",temp,"",quad.result);
+		iindex1 = get_position2(quad.result);
+		if(iindex1 >= 0)
+		{
+			table[iindex1].val = res;
+			table[iindex1].used = 1;
+		} else{
+			add_table(quad.result,res,1);
+		}
+	} else{
+		if(isdigit(quad.arg1[0]))
+		{
+			//printf("Inside isdigit arg1\n");
+			iindex1 = get_position2(quad.arg2);
+			arg2 = table[iindex1].val;
+			table[iindex1].used = 0;
+			sprintf(temp,"%d",arg2);
+			add_quadruple2(quad.op,quad.arg1,temp,quad.result);
+		} else if(isdigit(quad.arg2[0])){
+			//printf("Inside isdigit arg2\n");
+			iindex1 = get_position2(quad.arg1);
+			//printf("Index is %d\n",iindex1);
+			arg1 = table[iindex1].val;
+			table[iindex1].used = 0;
+			sprintf(temp,"%d",arg1);
+			add_quadruple2(quad.op,temp,quad.arg2,quad.result);
+		} else{
+			iindex1 = get_position2(quad.arg1);
+			iindex2 = get_position2(quad.arg2);
+			if(iindex1 >= 0 && iindex2 >= 0)
+			{
+				arg1 = table[iindex1].val;
+				arg2 = table[iindex2].val;
+				table[iindex1].used = 0;
+				table[iindex2].used = 0;
+				sprintf(temp,"%d",arg1);
+				char temp2[10];
+				sprintf(temp2,"%d",arg2);
+				add_quadruple2(quad.op,temp,temp2,quad.result);
+			} else{
+				if(iindex1 >= 0)
+				{
+					arg1 = table[iindex1].val;
+					table[iindex1].used = 0;
+					sprintf(temp,"%d",arg1);
+					add_quadruple2(quad.op,temp,quad.arg2,quad.result);
+				} else if(iindex2 >= 0)
+				{
+					arg2 = table[iindex2].val;
+					table[iindex2].used = 0;
+					sprintf(temp,"%d",arg2);
+					add_quadruple2(quad.op,quad.arg1,temp,quad.result);
+				} else{
+					add_quadruple2(quad.op,quad.arg1,quad.arg2,quad.result);
+				}
+			}
+			
+		}
+	}
+	
 }
 
 void push(char *label)
@@ -536,6 +697,147 @@ void pop()
 char* get_top()
 {
 	return stk.label[stk.top];
+}
+
+// ---------------- Code Opt ------------------
+
+int get_result(char *op, int arg1, int arg2)
+{
+	if(strcmp(op,"+") == 0)
+	{
+		return arg1 + arg2;
+	} else if(strcmp(op,"-") == 0)
+	{
+		return arg1 - arg2;
+	} else if(strcmp(op,"*") == 0)
+	{
+		return arg1 * arg2;
+	} else if(strcmp(op,"/") == 0)
+	{
+		return arg1 / arg2;
+	}
+}
+
+void add_quadruple2(char *op, char* arg1, char* arg2, char* result)
+{
+	char temp[10];	
+	if(strcmp(result,"r") >= 47 && strlen(op) != 0)
+	{
+		sprintf(temp,"%s%s%s",arg1,op,arg2);
+		strcpy(QUAD2[q_ind].arg1,temp);
+		strcpy(QUAD2[q_ind].arg2,"");
+		strcpy(QUAD2[q_ind].op,"");
+	} else{
+		strcpy(QUAD2[q_ind].op,op);
+		strcpy(QUAD2[q_ind].arg1,arg1);
+		strcpy(QUAD2[q_ind].arg2,arg2);
+	}
+	strcpy(QUAD2[q_ind++].result,result);
+}
+
+void add_table(char *var, int val, int used)
+{
+	strcpy(table[t_ind].var,var);
+	table[t_ind].val = val;
+	table[t_ind++].used = used;
+}
+
+void add_table2(char *var, char* args)
+{
+	strcpy(table2[t_ind2].var,var);
+	strcpy(table2[t_ind2++].regval,args);
+}
+
+int get_position2(char* string)
+{
+    for(int i=0;i<=t_ind;i++)
+	{
+		if(strcmp(table[i].var,string) == 0)
+		{
+			return i;
+		}
+	}
+	return -1;
+
+}
+
+int get_position3(char* string)
+{
+    for(int i=0;i<=t_ind2;i++)
+	{
+		if(strcmp(table2[i].var,string) == 0)
+		{
+			return i;
+		}
+	}
+	return -1;
+
+}
+
+void print_codeopt()
+{
+	char temp[10];
+	char arg1[10],arg2[10];
+	/*printf("\t\t\t\t Quadruples \t\t\t\t\n");
+	printf("\n\t%s\t|\t%s\t|\t%s\t|\t%s\t|\t%s\t","pos","op","arg1","arg2","result");
+	printf("\n\t------------------------------------------------------------------------");
+	for(int i=0;i<q_ind;i++)
+	{
+		printf("\n\t%d\t|\t%s\t|\t%s\t|\t%s\t|\t%s\t", i,QUAD2[i].op, QUAD2[i].arg1,QUAD2[i].arg2,QUAD2[i].result);
+	}
+	printf("\n\n\n\n");*/
+	printf("\t\t\t\t Optimized Code \t\t\t\t\n");
+	for(int i=0;i<q_ind;i++)
+	{
+		if(strcmp(QUAD2[i].op,"L") == 0)
+		{
+			printf("%s:\n",QUAD2[i].result);
+		} else if(strcmp(QUAD2[i].op,"goto") == 0){
+			printf("%s %s\n",QUAD2[i].op,QUAD2[i].result);
+		} else if(strcmp(QUAD2[i].op,"if") == 0){
+			printf("%s(!(%s)) goto %s\n",QUAD2[i].op,QUAD2[i].arg1,QUAD2[i].result);
+		} else{
+			if(strcmp(QUAD2[i].result,"r") >= 47)
+			{
+				sprintf(temp,"%s%s%s",QUAD2[i].arg1,QUAD2[i].op,QUAD2[i].arg2);
+				add_table2(QUAD2[i].result,temp);
+				//printf("Added register %s in new table\n",QUAD2[i].result);
+			} else{
+				strcpy(arg1,QUAD2[i].arg1);
+				strcpy(arg2,QUAD2[i].arg2);
+				if(strcmp(arg1,"r") >= 47)
+				{
+					int iindex = get_position3(arg1);
+					strcpy(arg1,table2[iindex].regval);
+				}
+				if(strcmp(arg2,"r") >= 47)
+				{
+					int iindex = get_position3(arg2);
+					strcpy(arg2,table2[iindex].regval);
+				}
+				printf("%s = %s %s %s\n",QUAD2[i].result,arg1,QUAD2[i].op,arg2);
+			}
+			
+		}
+	}	
+	printf("\n\n\n\n");
+	printf("Eliminated intermediate variables\n");
+	for(int i=0;i<t_ind2;i++){
+		printf("%s = %s\n",table2[i].var,table2[i].regval);
+	}
+}
+
+void print_table()
+{
+	printf("\t\t\t\t Symbol Table \t\t\t\t\n");
+	printf("\n\t%s\t|\t%s\t|\t%s\t","Varibale Name","Value","Used");
+	printf("\n\t-----------------------------------------------------------------------");	
+	for (int i = 0; i <= t_ind; i++) 
+	{
+		if (strcmp(symbol_table[i]->variable_name,"") != 0)
+			printf("\n\t\t%s\t|\t%d\t|\t%d\t", table[i].var, table[i].val, table[i].used);
+	}
+	printf("\n\n");	
 }
 
 // ---------------- GENERAL -------------------
@@ -569,7 +871,7 @@ int main(int argc,char *argv[])
 		printf("\nResult of parse: %d\n",a);
 		print_symbol_table();
 		print_3addr_code();
-
+		print_codeopt();
 	}
 	//printf("Error of parse: %d",a);
 	return 0;
