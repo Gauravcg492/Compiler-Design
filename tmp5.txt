@@ -1,0 +1,135 @@
+Keyword int in line 2
+Header file completed
+main main in line 2
+Opening brackets ( in line 2
+Closing brackets ) in line 2
+Opening braces { in line 2
+Keyword int in line 3
+Identifier a in line 3
+Inside new symbol table for global
+Assignment operator = in line 3
+Number 0 in line 3
+SEMI ; in line 3
+for for in line 4
+Opening brackets ( in line 4
+Keyword int in line 4
+Identifier i in line 4
+Inside new symbol table for global
+Assignment operator = in line 4
+Number 1 in line 4
+SEMI ; in line 4
+Identifier i in line 4
+Identifier i found with scope 0
+Current scope count 0
+Relational Operator < in line 4
+Number 5 in line 4
+SEMI ; in line 4
+Relational exp called
+var: i
+relop: <
+reg name: 5
+Identifier i in line 4
+Identifier i found with scope 0
+Current scope count 0
+Assignment operator = in line 4
+Identifier i in line 4
+Identifier i found with scope 0
+Current scope count 0
+Increment Operator + in line 4
+Number 1 in line 4
+Closing brackets ) in line 4
+Inside Assignment
+Opening braces { in line 5
+Keyword int in line 6
+Identifier j in line 6
+Inside new symbol table for global
+Assignment operator = in line 6
+Number 10 in line 6
+SEMI ; in line 6
+Closing braces } in line 7
+Identifier a in line 8
+Identifier a found with scope 0
+Current scope count 0
+Assignment operator = in line 8
+Number 5 in line 8
+SEMI ; in line 8
+Inside Assignment
+Closing braces } in line 9
+
+Preorder Traversal 
+PROGRAM int STATEMENT = Type int a 0 STATEMENT for STATEMENT = Type int i 1 STATEMENT < i 5 = i + i 1 = Type int j 10 = a 5 
+Inorder Traversal 
+int PROGRAM int Type a = 0 STATEMENT int Type i = 1 STATEMENT i < 5 STATEMENT i = i + 1 for int Type j = 10 STATEMENT a = 5 
+Postorder Traversal 
+int int a Type 0 = int i Type 1 = i 5 < i i 1 + = STATEMENT STATEMENT int j Type 10 = for a 5 = STATEMENT STATEMENT PROGRAM 
+Result of parse: 0
+				 Symbol Table 				
+
+	Varibale Name	|	Value	|	Type	|	Scope	
+	-----------------------------------------------------------------------
+		a	|	5	|	int	|	GLOBAL	
+		i	|	2	|	int	|	GLOBAL	
+		j	|	10	|	int	|	LOCAL	
+
+				 Quadruples 				
+
+	pos	|	op	|	arg1	|	arg2	|	result	
+	------------------------------------------------------------------------
+	0	|	=	|	0	|		|	a	
+	1	|	=	|	1	|		|	i	
+	2	|	<	|	i	|	5	|		
+	3	|	+	|	i	|	1	|	r0	
+	4	|	=	|	r0	|		|	i	
+	5	|	=	|	10	|		|	j	
+	6	|	=	|	5	|		|	a	
+
+
+
+main:
+a = 0
+i = 1
+L1:
+ if(!(i<5)) goto L2
+j = 10
+r0 = i + 1
+i = r0
+goto L1
+L2:
+a = 5
+
+
+				 Quadruples 				
+
+	pos	|	op	|	arg1	|	arg2	|	result	
+	------------------------------------------------------------------------
+	0	|	L	|		|		|	main	
+	1	|		|	0	|		|	a	
+	2	|		|	1	|		|	i	
+	3	|	L	|		|		|	L1	
+	4	|	if	|	i<5	|		|	L2	
+	5	|		|	10	|		|	j	
+	6	|		|	1+1	|		|	r0	
+	7	|		|	r0	|		|	i	
+	8	|	goto	|		|		|	L1	
+	9	|	L	|		|		|	L2	
+	10	|		|	5	|		|	a	
+
+
+
+				 Optimized Code 				
+main:
+a = 0  
+i = 1  
+L1:
+if(!(i<5)) goto L2
+j = 10  
+i = 1+1  
+goto L1
+L2:
+a = 5  
+
+
+
+
+Eliminated intermediate variables
+r0 = 1+1

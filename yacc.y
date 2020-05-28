@@ -70,6 +70,8 @@
 	int q_ind = 0;
 	int t_ind = 0;
 	int t_ind2 = 0;
+	struct quad QUAD3[30];
+	int q3_ind = 0;
 	
 	int get_result(char*,int,int);
 	int get_position2(char*);
@@ -79,6 +81,11 @@
 	void add_table2(char*,char*);
 	void print_codeopt();
 	void print_table();
+
+	void add_quadruple3(char*, char*, char*, char*);
+	int split_arg(char*, char*, char*, char*);
+	int in_func(char *pattern, char *string);
+	void write_quad_opt();
 	
 	//int StNo;
 	//int Ind; 
@@ -735,6 +742,15 @@ void add_quadruple2(char *op, char* arg1, char* arg2, char* result)
 	strcpy(QUAD2[q_ind++].result,result);
 }
 
+void add_quadruple3(char *op, char *arg1, char *arg2, char *result)
+{
+	strcpy(QUAD3[q3_ind].op, op);
+	strcpy(QUAD3[q3_ind].arg1, arg1);
+	strcpy(QUAD3[q3_ind].arg2, arg2);
+	strcpy(QUAD3[q3_ind].result, result);
+	q3_ind++;
+}
+
 void add_table(char *var, int val, int used)
 {
 	strcpy(table[t_ind].var,var);
@@ -774,28 +790,75 @@ int get_position3(char* string)
 
 }
 
+int in_func(char *pattern, char *string)
+{
+	int m = strlen(pattern);
+	int n = strlen(string);
+    for (int i = 0; i <= n - m; i++) { 
+        int j;   
+        for (j = 0; j < m; j++) 
+            if (string[i + j] != pattern[j]) 
+                break; 
+  
+        if (j == m) return 1; 
+            //printf("Pattern found at index %d \n", i); 
+    }
+	return 0;
+}
+
+int split_arg(char *exp, char *arg1, char *arg2, char *op)
+{
+	char *token;
+	if(in_func("<=", exp)) strcpy(op, "<=");
+	else if(in_func(">=", exp)) strcpy(op, ">=");
+	else if(in_func(">", exp)) strcpy(op, ">");
+	else if(in_func("<", exp)) strcpy(op, "<");
+	else if(in_func("==", exp)) strcpy(op, "==");
+	else if(in_func("!=", exp)) strcpy(op, "!=");
+	else if(in_func("+", exp)) strcpy(op, "+");
+	else if(in_func("-", exp)) strcpy(op, "-");
+	else if(in_func("*", exp)) strcpy(op, "*");
+	else if(in_func("/", exp)) strcpy(op, "/");
+	else strcpy(op, "");
+	token = strtok(exp, op);
+	strcpy(arg1, token);
+	token = strtok(NULL, op);
+	if(token != NULL) strcpy(arg2, token);
+	if(strcmp(op, "") == 0)
+	{
+		return 0;
+	}
+	return 1;
+}
+
 void print_codeopt()
 {
 	char temp[10];
-	char arg1[10],arg2[10];
-	/*printf("\t\t\t\t Quadruples \t\t\t\t\n");
+	char arg1[10],arg2[10], op[10];
+	printf("\t\t\t\t Quadruples \t\t\t\t\n");
 	printf("\n\t%s\t|\t%s\t|\t%s\t|\t%s\t|\t%s\t","pos","op","arg1","arg2","result");
 	printf("\n\t------------------------------------------------------------------------");
 	for(int i=0;i<q_ind;i++)
 	{
 		printf("\n\t%d\t|\t%s\t|\t%s\t|\t%s\t|\t%s\t", i,QUAD2[i].op, QUAD2[i].arg1,QUAD2[i].arg2,QUAD2[i].result);
 	}
-	printf("\n\n\n\n");*/
+	printf("\n\n\n\n");
 	printf("\t\t\t\t Optimized Code \t\t\t\t\n");
 	for(int i=0;i<q_ind;i++)
 	{
 		if(strcmp(QUAD2[i].op,"L") == 0)
 		{
 			printf("%s:\n",QUAD2[i].result);
+			add_quadruple3("LABEL", "","",QUAD2[i].result);
 		} else if(strcmp(QUAD2[i].op,"goto") == 0){
 			printf("%s %s\n",QUAD2[i].op,QUAD2[i].result);
+			add_quadruple3("goto", "", "", QUAD2[i].result);
 		} else if(strcmp(QUAD2[i].op,"if") == 0){
 			printf("%s(!(%s)) goto %s\n",QUAD2[i].op,QUAD2[i].arg1,QUAD2[i].result);
+			split_arg(QUAD2[i].arg1, arg1, arg2, op);
+			sprintf(temp, "r%d", rIndex++);
+			add_quadruple3(op, arg1, arg2, temp);
+			add_quadruple3("ifFalse", temp, "", QUAD2[i].result);
 		} else{
 			if(strcmp(QUAD2[i].result,"r") >= 47)
 			{
@@ -816,6 +879,11 @@ void print_codeopt()
 					strcpy(arg2,table2[iindex].regval);
 				}
 				printf("%s = %s %s %s\n",QUAD2[i].result,arg1,QUAD2[i].op,arg2);
+				if (split_arg(arg1, temp, arg2, op)) 
+				{
+					add_quadruple3(op, temp, arg2, QUAD2[i].result);
+				}
+				else add_quadruple3("=", arg1, "", QUAD2[i].result); 
 			}
 			
 		}
@@ -825,6 +893,22 @@ void print_codeopt()
 	for(int i=0;i<t_ind2;i++){
 		printf("%s = %s\n",table2[i].var,table2[i].regval);
 	}
+}
+
+void write_quad_opt()
+{
+	FILE *fp;
+	fp = fopen("opt.txt", "w+");
+	if(fp == NULL)
+	{
+		fprintf(stderr, "Error opening file");
+	}
+	fprintf(fp, "op|arg1|arg2|res\n");
+	for(int i = 0; i<q3_ind; i++)
+	{
+		fprintf(fp, "%s|%s|%s|%s\n",QUAD3[i].op, QUAD3[i].arg1, QUAD3[i].arg2, QUAD3[i].result);
+	}
+	fclose(fp);
 }
 
 void print_table()
@@ -872,6 +956,7 @@ int main(int argc,char *argv[])
 		print_symbol_table();
 		print_3addr_code();
 		print_codeopt();
+		write_quad_opt();
 	}
 	//printf("Error of parse: %d",a);
 	return 0;
