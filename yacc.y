@@ -55,7 +55,7 @@
 	void push(char *label);	
 	void pop();
 	char* get_top();
-	void eprint(struct quad);
+	void eprint(struct quad, char *opr);
 	
 	// ------------------------- codeopt ----------------
 	struct quad QUAD2[30];
@@ -85,7 +85,8 @@
 	void add_quadruple3(char*, char*, char*, char*);
 	int split_arg(char*, char*, char*, char*);
 	int in_func(char *pattern, char *string);
-	void write_quad_opt();
+	void write_quad_opt(char *filename);
+	void write_symbol_table(char *filename);
 	
 	//int StNo;
 	//int Ind; 
@@ -425,7 +426,7 @@ void print_3addr_code()
 		if(i != 0 && QUAD[i].scope >= QUAD[i-1].scope){
 			if(strcmp(QUAD[i].block,"main") == 0)
 			{
-				eprint(QUAD[i]);
+				eprint(QUAD[i], "");
 			}
 			if(strcmp(QUAD[i].block,"if") == 0)
 			{
@@ -439,7 +440,7 @@ void print_3addr_code()
 				}
 				else
 				{	
-					eprint(QUAD[i]);	
+					eprint(QUAD[i], "");	
 				}
 			}
 			if(strcmp(QUAD[i].block,"else") == 0)
@@ -457,7 +458,7 @@ void print_3addr_code()
 					label_stk[ltop]++;
 					estart = 0;
 				}
-				eprint(QUAD[i]);
+				eprint(QUAD[i], "");
 			}
 			if(strcmp(QUAD[i].block,"while") == 0)
 			{
@@ -475,7 +476,7 @@ void print_3addr_code()
 				}
 				else
 				{
-					eprint(QUAD[i]);
+					eprint(QUAD[i], "while");
 				}
 			}
 			if(strcmp(QUAD[i].block,"for") == 0)
@@ -487,7 +488,7 @@ void print_3addr_code()
 						if(strcmp(QUAD[i].result,"r") < 47){
 							fstates++;
 						}
-						eprint(QUAD[i]);
+						eprint(QUAD[i], "");
 						infor = 1;
 					}
 					else if(fstates == 1)
@@ -530,7 +531,7 @@ void print_3addr_code()
 				}
 				else
 				{
-					eprint(QUAD[i]);
+					eprint(QUAD[i], "");
 				}
 			}
 		} // if they come out of block
@@ -556,7 +557,7 @@ void print_3addr_code()
 					int steps = fsteps[ftop].step;
 					for(int k=sind;k<sind+steps;k++)
 					{
-						eprint(QUAD[k]);
+						eprint(QUAD[k], "for");
 					}
 					ftop--;
 					sprintf(temp,"L%d",label_stk[ltop]-1);
@@ -568,7 +569,7 @@ void print_3addr_code()
 				add_quadruple2("L","","",temp);
 				printf("L%d:\n",label_stk[ltop--]);
 			}
-			eprint(QUAD[i]);
+			eprint(QUAD[i], "");
 			estart = 1;
 		}
 		
@@ -578,7 +579,7 @@ void print_3addr_code()
 
 }
 
-void eprint(struct quad quad)
+void eprint(struct quad quad, char *opr)
 {
 	int res;
 	char temp[10];
@@ -895,10 +896,10 @@ void print_codeopt()
 	}
 }
 
-void write_quad_opt()
+void write_quad_opt(char *filename)
 {
 	FILE *fp;
-	fp = fopen("opt.txt", "w+");
+	fp = fopen(filename, "w+");
 	if(fp == NULL)
 	{
 		fprintf(stderr, "Error opening file");
@@ -909,6 +910,28 @@ void write_quad_opt()
 		fprintf(fp, "%s|%s|%s|%s\n",QUAD3[i].op, QUAD3[i].arg1, QUAD3[i].arg2, QUAD3[i].result);
 	}
 	fclose(fp);
+}
+
+void write_symbol_table(char *filename)
+{
+	FILE *fp;
+	fp = fopen(filename, "w+");
+	if(fp == NULL)
+	{
+		fprintf(stderr, "Error opening file");
+	}
+	fprintf(fp, "name:scope:type:value\n");
+	for (int i = 0; i <= ind; i++) 
+	{
+		if (strcmp(symbol_table[i]->variable_name,"") != 0)
+		{
+			if(strcmp(symbol_table[i]->scope,"LOCAL") != 0)
+			{
+				fprintf(fp, "%s:id:%s:%d\n", symbol_table[i]->variable_name, symbol_table[i]->type, symbol_table[i]->value);
+			}
+		}
+			//printf("\n\t\t%s\t|\t%d\t|\t%s\t|\t%s\t", symbol_table[i]->variable_name, symbol_table[i]->value, symbol_table[i]->type,symbol_table[i]->scope);
+	}
 }
 
 void print_table()
@@ -956,7 +979,10 @@ int main(int argc,char *argv[])
 		print_symbol_table();
 		print_3addr_code();
 		print_codeopt();
-		write_quad_opt();
+		if(argc == 3 || argc == 4) write_quad_opt(argv[2]);
+		else write_quad_opt("opt.txt");
+		if(argc == 4) write_symbol_table(argv[3]);
+		else write_symbol_table("st.txt");
 	}
 	//printf("Error of parse: %d",a);
 	return 0;
